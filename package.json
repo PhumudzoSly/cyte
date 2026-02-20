@@ -1,6 +1,6 @@
 {
   "name": "cyte",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Recursive Web to Markdown CLI for AI Agents",
   "type": "module",
   "main": "dist/cli.js",

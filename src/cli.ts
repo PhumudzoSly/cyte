@@ -20,7 +20,11 @@ program
   .option("--delay <number>", "Delay between requests in ms", "150")
   .option("--concurrency <number>", "Max concurrent requests", "3")
   .option("--output <path>", "Output directory", "./cyte")
+  .option("--clean", "Delete target domain folder before deep crawl")
+  .option("--sitemap", "Seed deep crawl from sitemap.xml/robots sitemap entries")
+  .option("--no-respect-robots", "Ignore robots.txt rules in deep crawling")
   .option("--json", "Emit JSON output")
+  .option("--format <type>", "Structured output format: json|jsonl", "json")
   .option("--download-media", "Reserved for future media download support", false)
   .action(async (url: string | undefined, cliOptions) => {
     if (!url) {
@@ -35,6 +39,10 @@ program
       concurrency: toPositiveInt(cliOptions.concurrency, "concurrency"),
       output: String(cliOptions.output),
       json: Boolean(cliOptions.json),
+      format: toOutputFormat(cliOptions.format),
+      clean: Boolean(cliOptions.clean),
+      sitemap: Boolean(cliOptions.sitemap),
+      respectRobots: Boolean(cliOptions.respectRobots),
       downloadMedia: Boolean(cliOptions.downloadMedia),
     };
 
@@ -49,6 +57,7 @@ program
   .option("--external", "Only external links")
   .option("--match <pattern>", "Filter links by text/URL")
   .option("--json", "Emit JSON output")
+  .option("--format <type>", "Structured output format: json|jsonl", "json")
   .action(async (url: string, cliOptions) => {
     const rootOptions = program.opts();
     const options: LinksOptions = {
@@ -56,6 +65,7 @@ program
       external: Boolean(cliOptions.external),
       match: cliOptions.match ? String(cliOptions.match) : undefined,
       json: Boolean(cliOptions.json || rootOptions.json),
+      format: toOutputFormat(cliOptions.format || rootOptions.format || "json"),
     };
 
     await runLinksCommand(url, options);
@@ -81,4 +91,12 @@ function toNonNegativeInt(value: string, label: string): number {
     throw new Error(`${label} must be a non-negative integer`);
   }
   return parsed;
+}
+
+function toOutputFormat(value: string): "json" | "jsonl" {
+  const normalized = String(value).toLowerCase();
+  if (normalized !== "json" && normalized !== "jsonl") {
+    throw new Error("format must be one of: json, jsonl");
+  }
+  return normalized;
 }

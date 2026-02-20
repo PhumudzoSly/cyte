@@ -3,6 +3,7 @@ import chalk from "chalk";
 
 import { fetchPage } from "../core/fetcher.js";
 import { extractLinksFromHtml, filterLinks } from "../core/links.js";
+import { printStructured } from "../core/output.js";
 import { info, ok } from "../core/ui.js";
 import { coerceUrl, normalizeUrl } from "../core/url.js";
 import type { LinksOptions } from "../types.js";
@@ -18,7 +19,7 @@ export async function runLinksCommand(rawUrl: string, options: LinksOptions): Pr
   });
 
   if (options.json) {
-    console.log(JSON.stringify(filtered, null, 2));
+    printStructured(filtered, options.format);
     return;
   }
 

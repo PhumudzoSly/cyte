@@ -7,6 +7,8 @@ interface CrawlEngineOptions {
   depth: number;
   concurrency: number;
   delayMs: number;
+  seedUrls?: string[];
+  shouldVisitUrl?: (url: string) => boolean;
 }
 
 interface VisitResult<T> {
@@ -28,10 +30,19 @@ export async function crawlSite<T>(
 ): Promise<{ pages: Array<CrawlPage & { data?: T }>; visitedUrls: Set<string> }> {
   const normalizedStart = normalizeUrl(startUrl, { stripQuery: true });
   const baseOrigin = new URL(normalizedStart).origin;
-  const visited = new Set<string>([normalizedStart]);
+  const initialQueue =
+    options.seedUrls && options.seedUrls.length > 0
+      ? options.seedUrls.map((url) => normalizeUrl(url, { stripQuery: true }))
+      : [normalizedStart];
+  const uniqueInitialQueue = [...new Set(initialQueue)];
+  const visited = new Set<string>(uniqueInitialQueue);
   const pages: Array<CrawlPage & { data?: T }> = [];
 
-  let currentLevel = [normalizedStart];
+  let currentLevel = uniqueInitialQueue.filter((url) => {
+    if (new URL(url).origin !== baseOrigin) return false;
+    if (!options.shouldVisitUrl) return true;
+    return options.shouldVisitUrl(url);
+  });
 
   for (let depth = 0; depth <= options.depth && currentLevel.length > 0; depth += 1) {
     const nextLevelCandidates: string[] = [];
@@ -58,6 +69,7 @@ export async function crawlSite<T>(
               if (!normalized) continue;
               if (!isInternalUrl(normalizedStart, normalized)) continue;
               if (new URL(normalized).origin !== baseOrigin) continue;
+              if (options.shouldVisitUrl && !options.shouldVisitUrl(normalized)) continue;
               if (visited.has(normalized)) continue;
               visited.add(normalized);
               nextLevelCandidates.push(normalized);
@@ -86,6 +98,8 @@ interface CrawlWebsiteOptions {
   depth: number;
   concurrency: number;
   delayMs: number;
+  seedUrls?: string[];
+  shouldVisitUrl?: (url: string) => boolean;
 }
 
 export async function crawlWebsite(startUrl: string, options: CrawlWebsiteOptions): Promise<CrawlSummary> {

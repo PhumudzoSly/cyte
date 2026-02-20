@@ -14,10 +14,11 @@ export function printStructured(data: unknown, format: OutputFormat): void {
   }
 
   if (isCrawlSummary(data)) {
-    const { pages, ...summary } = data;
+    const { pages, ...summary } = data as { pages: unknown[]; [key: string]: unknown };
     console.log(JSON.stringify({ type: "summary", ...summary }));
     for (const page of pages) {
-      console.log(JSON.stringify({ type: "page", ...page }));
+      const pageObject = page && typeof page === "object" ? page : { value: page };
+      console.log(JSON.stringify({ type: "page", ...pageObject }));
     }
     return;
   }
@@ -35,4 +36,3 @@ function isCrawlSummary(
       Array.isArray((value as { pages?: unknown }).pages),
   );
 }
-

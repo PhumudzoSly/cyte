@@ -62,7 +62,11 @@ Options:
 - `--delay <number>`: delay between requests in ms, default `150`.
 - `--concurrency <number>`: max parallel crawl requests, default `3`.
 - `--output <path>`: output directory for deep crawl, default `./cyte`.
+- `--clean`: remove target domain output directory before deep crawl.
+- `--sitemap`: seed crawl from sitemap URLs (including robots sitemap entries).
+- `--no-respect-robots`: ignore robots.txt rules during deep crawl.
 - `--json`: return structured JSON instead of human output.
+- `--format <type>`: `json` or `jsonl` (used with `--json`), default `json`.
 - `--download-media`: reserved flag (not active yet).
 
 ### `cyte links <url>`
@@ -84,6 +88,7 @@ Options:
 - `--external`: only external links.
 - `--match <pattern>`: filter by title or URL substring.
 - `--json`: output JSON array.
+- `--format <type>`: `json` or `jsonl` (used with `--json`), default `json`.
 
 ## URL Handling
 
@@ -129,6 +134,8 @@ cyte/
 - Existing output files at the same path are overwritten.
 - Missing directories are created automatically.
 - Deep crawl ensures `.gitignore` contains `cyte/`.
+- If crawl failures occur, an error report is written to:
+  - `cyte/<domain>/_errors.json`
 
 ## JSON Output Contracts
 
@@ -172,6 +179,22 @@ cyte/
   "pages": []
 }
 ```
+
+### JSONL output
+Use `--format jsonl` with `--json`.
+
+Examples:
+```bash
+cyte links docs.example.com --json --format jsonl
+cyte docs.example.com --deep --json --format jsonl
+```
+
+Notes:
+- `links` emits one link object per line.
+- `extract` emits one object line.
+- `deep` emits:
+  - one `summary` line
+  - one `page` line per crawled page
 
 ## AI Agent Usage
 
@@ -223,6 +246,20 @@ cyte https://docs.example.com --deep --depth 2 --json
 - Treat page-level failures as partial success and continue.
 - Re-crawls overwrite existing files by output path.
 
+### Node.js tool wrapper example
+
+```ts
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+
+async function discoverLinks(url: string) {
+  const { stdout } = await execFileAsync("cyte", ["links", url, "--json"]);
+  return JSON.parse(stdout) as Array<{ title: string; url: string; type: string }>;
+}
+```
+
 ## Extraction Details
 
 - Uses Readability + fallback extraction for landing pages where Readability is too thin.
@@ -268,6 +305,17 @@ pnpm test:watch
 - If a site blocks requests, try a lower concurrency and add delay:
   - `--concurrency 1 --delay 400`
 - If deep crawl seems incomplete, increase `--depth`.
+- If crawl coverage is still low, try `--sitemap`.
+- If pages are skipped unexpectedly, verify robots rules or use `--no-respect-robots`.
+
+## Releases
+
+- Changelog: see `CHANGELOG.md`.
+- Versioning: semantic versioning (`major.minor.patch`).
+- Publish flow:
+  1. update `CHANGELOG.md`
+  2. bump version (`pnpm version patch|minor|major`)
+  3. publish (`pnpm publish --access public`)
 
 ## License
 

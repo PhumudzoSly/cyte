@@ -1,20 +1,31 @@
 import path from "node:path";
 
 import chalk from "chalk";
+import fs from "fs-extra";
 import ora from "ora";
 
 import { ensureCyteIgnored } from "../core/gitignore.js";
+import { printStructured } from "../core/output.js";
 import { dimPath, info, ok, warn } from "../core/ui.js";
-import { coerceUrl, normalizeUrl } from "../core/url.js";
+import { coerceUrl, domainFolderForUrl, normalizeUrl } from "../core/url.js";
 import type { ExtractOptions, ExtractedPage } from "../types.js";
 
 export async function runExtractCommand(rawUrl: string, options: ExtractOptions): Promise<void> {
-  const [{ crawlWebsite }, { extractContentFromHtml }, { fetchPage }, { extractLinksFromHtml }] =
+  const [
+    { crawlWebsite },
+    { extractContentFromHtml },
+    { fetchPage },
+    { extractLinksFromHtml },
+    { discoverUrlsFromSitemap },
+    { loadRobotsMatcher },
+  ] =
     await Promise.all([
       import("../core/crawler.js"),
       import("../core/extractor.js"),
       import("../core/fetcher.js"),
       import("../core/links.js"),
+      import("../core/sitemap.js"),
+      import("../core/robots.js"),
     ]);
 
   const url = normalizeUrl(coerceUrl(rawUrl), { stripQuery: false });
@@ -22,17 +33,45 @@ export async function runExtractCommand(rawUrl: string, options: ExtractOptions)
 
   if (options.deep) {
     await ensureCyteIgnored();
+    const domainDir = path.join(options.output, domainFolderForUrl(url));
+    if (options.clean) {
+      await fs.remove(domainDir);
+    }
+
+    let seedUrls: string[] | undefined;
+    if (options.sitemap) {
+      seedUrls = await discoverUrlsFromSitemap(url);
+      if (seedUrls.length === 0) {
+        console.error(warn("No URLs discovered from sitemap; falling back to standard crawl."));
+      } else {
+        console.error(info(`Sitemap discovered ${seedUrls.length} URL(s).`));
+      }
+    }
+
+    let shouldVisitUrl: ((targetUrl: string) => boolean) | undefined;
+    if (options.respectRobots) {
+      try {
+        const robots = await loadRobotsMatcher(new URL(url).origin);
+        shouldVisitUrl = robots.isAllowed;
+        console.error(info(`Using robots.txt rules from ${robots.sourceUrl}`));
+      } catch {
+        console.error(warn("Could not read robots.txt, continuing without robots filtering."));
+      }
+    }
+
     spinner?.start(`Crawling ${url} up to depth ${options.depth}...`);
     const summary = await crawlWebsite(url, {
       outputDir: options.output,
       depth: options.depth,
       concurrency: options.concurrency,
       delayMs: options.delay,
+      seedUrls,
+      shouldVisitUrl,
     });
     spinner?.stop();
 
     if (options.json) {
-      console.log(JSON.stringify(summary, null, 2));
+      printStructured(summary, options.format);
       return;
     }
 
@@ -47,6 +86,11 @@ export async function runExtractCommand(rawUrl: string, options: ExtractOptions)
       console.error(`${info(page.url)} ${chalk.gray("->")} ${dimPath(relative)}`);
     }
     if (summary.pagesFailed > 0) {
+      const errorFilePath = path.join(domainDir, "_errors.json");
+      const failedPages = summary.pages.filter((page) => !page.success);
+      await fs.ensureDir(domainDir);
+      await fs.writeFile(errorFilePath, JSON.stringify(failedPages, null, 2), "utf8");
+      console.error(info(`Failed URL report: ${path.relative(process.cwd(), errorFilePath)}`));
       console.error(warn(`${summary.pagesFailed} page(s) failed during crawl.`));
     }
     return;
@@ -64,7 +108,7 @@ export async function runExtractCommand(rawUrl: string, options: ExtractOptions)
   };
 
   if (options.json) {
-    console.log(JSON.stringify(payload, null, 2));
+    printStructured(payload, options.format);
     return;
   }
 

@@ -1,6 +1,6 @@
 {
   "name": "cyte",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Recursive Web to Markdown CLI",
   "type": "module",
   "main": "dist/cli.js",

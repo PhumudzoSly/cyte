@@ -11,6 +11,28 @@
 
 ## Install
 
+Global install (recommended for regular usage):
+
+```bash
+pnpm add -g cyte
+cyte --help
+```
+
+No-install one-off usage:
+
+```bash
+npx cyte --help
+npx cyte https://example.com
+```
+
+PNPM one-off alternative:
+
+```bash
+pnpm dlx cyte --help
+```
+
+For local development of this repo:
+
 ```bash
 pnpm install
 pnpm build
@@ -22,6 +44,7 @@ Single page extraction (stdout):
 
 ```bash
 cyte vercel.com
+npx cyte vercel.com
 ```
 
 Links only:

@@ -181,15 +181,18 @@ cyte/
 ```
 
 ### JSONL output
+
 Use `--format jsonl` with `--json`.
 
 Examples:
+
 ```bash
 cyte links docs.example.com --json --format jsonl
 cyte docs.example.com --deep --json --format jsonl
 ```
 
 Notes:
+
 - `links` emits one link object per line.
 - `extract` emits one object line.
 - `deep` emits:
@@ -256,7 +259,11 @@ const execFileAsync = promisify(execFile);
 
 async function discoverLinks(url: string) {
   const { stdout } = await execFileAsync("cyte", ["links", url, "--json"]);
-  return JSON.parse(stdout) as Array<{ title: string; url: string; type: string }>;
+  return JSON.parse(stdout) as Array<{
+    title: string;
+    url: string;
+    type: string;
+  }>;
 }
 ```
 

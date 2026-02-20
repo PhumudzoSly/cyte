@@ -39,7 +39,7 @@ program
       concurrency: toPositiveInt(cliOptions.concurrency, "concurrency"),
       output: String(cliOptions.output),
       json: Boolean(cliOptions.json),
-      format: toOutputFormat(cliOptions.format),
+      format: toOutputFormat(inferFormatArg() ?? cliOptions.format),
       clean: Boolean(cliOptions.clean),
       sitemap: Boolean(cliOptions.sitemap),
       respectRobots: Boolean(cliOptions.respectRobots),
@@ -60,12 +60,13 @@ program
   .option("--format <type>", "Structured output format: json|jsonl", "json")
   .action(async (url: string, cliOptions) => {
     const rootOptions = program.opts();
+    const inferredFormat = inferFormatArg();
     const options: LinksOptions = {
       internal: Boolean(cliOptions.internal),
       external: Boolean(cliOptions.external),
       match: cliOptions.match ? String(cliOptions.match) : undefined,
       json: Boolean(cliOptions.json || rootOptions.json),
-      format: toOutputFormat(cliOptions.format || rootOptions.format || "json"),
+      format: toOutputFormat(inferredFormat ?? cliOptions.format ?? rootOptions.format ?? "json"),
     };
 
     await runLinksCommand(url, options);
@@ -99,4 +100,26 @@ function toOutputFormat(value: string): "json" | "jsonl" {
     throw new Error("format must be one of: json, jsonl");
   }
   return normalized;
+}
+
+function inferFormatArg(): string | null {
+  const args = process.argv;
+  if (args.includes("--format") && args.join(" ").includes("--format jsonl")) {
+    return "jsonl";
+  }
+  if (args.includes("--format") && args.join(" ").includes("--format json")) {
+    return "json";
+  }
+
+  const index = args.lastIndexOf("--format");
+  if (index >= 0 && index + 1 < args.length) {
+    return args[index + 1] ?? null;
+  }
+
+  const inline = args.find((arg) => arg.startsWith("--format="));
+  if (inline) {
+    return inline.slice("--format=".length);
+  }
+
+  return null;
 }

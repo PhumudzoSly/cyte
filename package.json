@@ -1,0 +1,45 @@
+{
+  "name": "cyte",
+  "version": "1.0.0",
+  "description": "Recursive Web to Markdown CLI",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "cyte": "dist/cli.js",
+    "cite": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "prepublishOnly": "pnpm build",
+    "test": "vitest run test",
+    "test:watch": "vitest test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "chalk": "^5.6.2",
+    "cheerio": "^1.2.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^14.0.3",
+    "fs-extra": "^11.3.3",
+    "jsdom": "^28.1.0",
+    "ora": "^9.3.0",
+    "p-limit": "^7.3.0",
+    "turndown": "^7.2.2",
+    "turndown-plugin-gfm": "^1.0.2",
+    "undici": "^7.22.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^25.3.0",
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
